@@ -56,4 +56,29 @@ public class TopicController {
         return ResponseEntity.ok("Datos actualizados");
 
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity detallarTopico(@PathVariable Long id) {
+        //var topico = topicRepository.getReferenceById(id);
+        var topicoOpcional = topicRepository.findById(id);
+        if (topicoOpcional.isPresent()) {
+            var topico = topicoOpcional.get();
+        return ResponseEntity.ok(new DatosDetalleTopico(topico));
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @Transactional
+    @DeleteMapping("/{id}")
+    public ResponseEntity eliminarTopico(@PathVariable Long id) {
+        var topicoOpcional = topicRepository.findById(id);
+
+        if (topicoOpcional.isPresent()) {
+            topicRepository.deleteById(id);
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
+
+    }
+
 }
