@@ -11,6 +11,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @RestController
 @RequestMapping("/topicos")
@@ -28,7 +29,7 @@ public class TopicController {
 
     @PostMapping
     @Transactional
-    public ResponseEntity<String> registrarTopicos(@RequestBody @Valid DatosRegistroTopico datos) {
+    public ResponseEntity registrarTopicos(@RequestBody @Valid DatosRegistroTopico datos, UriComponentsBuilder uriComponentsBuilder) {
 
         if (topicRepository.existsByTituloAndMensaje(datos.titulo(), datos.mensaje())) {
             throw new IllegalArgumentException("Tópico ya existe con ese título y mensaje");
@@ -37,15 +38,20 @@ public class TopicController {
         var autor = usuarioRepository.getReferenceByNombre(datos.nombreAutor());
         var curso = cursoRepository.findByNombre(datos.nombreCurso()).orElseThrow(() -> new IllegalArgumentException("Curso no encontrado"));
 
-        topicRepository.save(new Topico(datos,autor,curso));
+        var topico = new Topico(datos,autor,curso);
+        topicRepository.save(topico);
 
-        return ResponseEntity.ok("Topico registrado con exito");
+
+        var uri = uriComponentsBuilder.path("/topicos/{id}").buildAndExpand(topico.getId()).toUri();
+
+        return ResponseEntity.created(uri).body(new DatosDetalleTopico(topico));
 
     }
 
     @GetMapping
-    public Page<DatosListadotopicos> listarTopicos(@PageableDefault(size = 10,sort = "fechaCreacion") Pageable paginacion ) {
-        return topicRepository.findAll(paginacion).map(DatosListadotopicos::new);
+    public ResponseEntity<Page<DatosListadotopicos>> listarTopicos(@PageableDefault(size = 10,sort = "fechaCreacion") Pageable paginacion ) {
+        var page = topicRepository.findAll(paginacion).map(DatosListadotopicos::new);
+        return ResponseEntity.ok(page);
     }
 
     @Transactional
@@ -53,7 +59,7 @@ public class TopicController {
     public ResponseEntity actualizarTopico(@RequestBody @Valid DatosActualizarTopico datos) {
         var topico = topicRepository.getReferenceById(datos.id());
         topico.actualizarInformacionTopico(datos);
-        return ResponseEntity.ok("Datos actualizados");
+        return ResponseEntity.ok(new DatosDetalleTopico(topico));
 
     }
 
